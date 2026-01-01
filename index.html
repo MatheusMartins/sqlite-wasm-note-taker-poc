@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQLite In browser POC</title>
+  <link rel="icon" type="image/png" href="/minidisc.png">
+</head>
+
+<style>
+  table,
+  th,
+  td {
+    border: 1px solid black;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+</style>
+
+<body>
+  <h1>Note-taker</h1>
+
+  <form id="new-note-form">
+    <textarea placeholder="New note..." name="new-note-text" rows="4" cols="50"></textarea>
+    <div>
+      <button type="submit">New note</button>
+      <button type="button" id="reset-db-btn">Reset DB</button>
+    </div>
+  </form>
+
+  <hr>
+
+  <div id="existing-notes"></div>
+
+  <!-- Load JS module from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.js"
+    integrity="sha512-tz0jOZaOg9RtWWB6AdxSkINQwIs7S5obj1Dlml9KewZLPTblTWCux5eLtnexBb8kbLUo5crPmjsi8/vI17Vw0w=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script type="module">
+    try {
+      // Initialise DB
+      let db;
+      const DB_FILENAME = 'sqlite-notes.db';
+      // Load WASM module from CDN
+      const WASM_MODULE_URL = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.wasm";
+      const WASM_MODULE_INT = 'sha512-danYXf4HJ8/l0CUS9O4q3OtfUS25SXMzFmAsQrtIZV6WEXaRjDHHv4FzG9ZILfs/9rxlnpgVZgdM3oUxWRLjIg==';
+      const response = await fetch(WASM_MODULE_URL, { integrity: WASM_MODULE_INT });
+      const wasmBinary = await response.arrayBuffer();
+      const sqlite3 = await window.initSqlJs({ wasmBinary });
+      
+      async function saveDatabase() {
+        const data = db.export();
+        const root = await navigator.storage.getDirectory();
+        const fileHandle = await root.getFileHandle(DB_FILENAME, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(data);
+        await writable.close();
+      }
+
+      async function loadDatabase() {
+        try {
+          const root = await navigator.storage.getDirectory();
+          const fileHandle = await root.getFileHandle(DB_FILENAME);
+          const file = await fileHandle.getFile();
+          const arrayBuffer = await file.arrayBuffer();
+          return new Uint8Array(arrayBuffer);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      async function deleteDatabase() {
+        try {
+          const root = await navigator.storage.getDirectory();
+          await root.removeEntry(DB_FILENAME);
+        } catch (error) {
+          console.log('No database file to delete');
+        }
+      }
+
+      const savedData = await loadDatabase();
+      if (savedData) {
+        db = new sqlite3.Database(savedData);
+      } else {
+        db = new sqlite3.Database();
+        const sqlCreateNotes = `
+          CREATE TABLE IF NOT EXISTS notes (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              note TEXT NOT NULL
+          );
+        `;
+        const firstNote = `Hello world! This note-taker is vulnerable, so use
+        it like so - do not put here anything you would not want the whole world
+        to know.`;
+        db.exec(sqlCreateNotes);
+        db.run("INSERT INTO notes (note) VALUES (?)", [firstNote]);
+        await saveDatabase();
+      }
+
+      function refreshNotes() {
+        const sqlSelectAllNotes = `
+            SELECT * FROM notes;
+        `;
+        const notes = db.exec(sqlSelectAllNotes);
+        if (notes.length > 0) {
+          const existingNotesDiv = document.getElementById("existing-notes")
+          const { columns, values } = notes[0];
+          const tableHead = columns.map(col => `<th>${col}</th>`).join('');
+          const tableRows = values.map(row => {
+            const cells = row.map(cell => `<td>${cell}</td>`).join('');
+            return `<tr>${cells}</tr>`;
+          }).join('');
+          // the following line will be quite central
+          // to enabling this project for XSS vulnerability
+          existingNotesDiv.innerHTML = `
+            <table>
+              <thead><tr>${tableHead}</tr></thead>
+              <tbody>${tableRows}</tbody>
+            </table>
+          `;
+        }
+      }
+
+      // refreshNotes once on load
+      refreshNotes();
+
+      // Form event listeners and handlers
+      const handleFormSubmit = async (event) => {
+        event.preventDefault();
+        const newNoteText = event.target.elements["new-note-text"].value;
+        const sqlNewNote = "INSERT INTO notes (note) VALUES (?)";
+        db.run(sqlNewNote, [newNoteText]);
+        await saveDatabase();
+        refreshNotes();
+      }
+      const myForm = document.querySelector('#new-note-form');
+      myForm.addEventListener('submit', handleFormSubmit);
+
+      const handleFormReset = async () => {
+        if (confirm('Are you sure you want to reset the database?')) {
+          await deleteDatabase();
+          location.reload();
+        }
+      }
+      const resetBtn = document.getElementById('reset-db-btn');
+      resetBtn.addEventListener('click', handleFormReset);
+
+      // Finish
+      console.log("Initialization succesful")
+    } catch (e) {
+      console.log("Initialization errored")
+      console.log("Error loading SQLite: \n\t" + String(e));
+    }
+  </script>
+</body>
+
+</html>
