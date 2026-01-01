@@ -23,11 +23,19 @@
 
 <body>
   <h1>Note-taker</h1>
+  <p>
+    <a href="README.md">
+      README
+    </a> / 
+    <a href="https://github.com/MatheusMartins/sqlite-wasm-note-taker-poc">
+      Github
+    </a>
+  </p>
 
   <form id="new-note-form">
     <textarea placeholder="New note..." name="new-note-text" rows="4" cols="50"></textarea>
     <div>
-      <button type="submit">New note</button>
+      <button type="submit">Add new note</button>
       <button type="button" id="reset-db-btn">Reset DB</button>
     </div>
   </form>
@@ -94,9 +102,11 @@
               note TEXT NOT NULL
           );
         `;
-        const firstNote = `Hello world! This note-taker is vulnerable, so use
-        it like so - do not put here anything you would not want the whole world
-        to know.`;
+        const firstNote = `Hello world! 
+        This note-taker is a a proof of concept and is vulnerable, so use it 
+        like so - do not put here anything you would not want the whole world
+        to know.
+        `;
         db.exec(sqlCreateNotes);
         db.run("INSERT INTO notes (note) VALUES (?)", [firstNote]);
         await saveDatabase();

@@ -1,5 +1,7 @@
 Proof of concept of SQLite via WebAssembly module implemented on a note taking app.
 
+
+
 - **SQLite WASM**: Full SQL database engine running client-side via `sql.js`.
 - **Persistence**: Saves the database state to the browser's Origin Private File System.
 - **Note Management**: Simple interface to create, view, and reset a notes database.
@@ -40,3 +42,12 @@ docker run --rm -it -p 3331:8080 -v "$PWD":/www busybox \
   Impact: Anyone with access to the computer can access the notes.
 
   Solution: Store keys in memory and prompt it from the user on every load. Storing keys on storage will defeat the purpose (indexedDB for example would still be accessible via the file system).
+
+- Main thread usage
+
+  Issue: The app relies on the main thread for its operations.
+
+  Impact: Can lead to UI freezes and unresponsiveness during database operations.
+
+  Solution: Offload database operations to a Web Worker to keep the UI responsive.
+
