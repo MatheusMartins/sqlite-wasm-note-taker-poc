@@ -1,10 +1,9 @@
 Proof of concept of SQLite via WebAssembly module implemented on a note taking app.
 
-
-
 - **SQLite WASM**: Full SQL database engine running client-side via `sql.js`.
 - **Persistence**: Saves the database state to the browser's Origin Private File System.
 - **Note Management**: Simple interface to create, view, and reset a notes database.
+
 
 ## How to Run
 
@@ -16,6 +15,7 @@ Use the following Docker command to start a local server that handles these head
 docker run --rm -it -p 3331:8080 -v "$PWD":/www busybox \
   sh -c "echo -e '# httpd.conf\n.wasm:application/wasm\n.js:application/javascript\n.html:text/html' > /etc/httpd.conf && httpd -f -p 8080 -h /www"
 ```
+
 
 ## Known Issues
 

@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SQLite In browser POC</title>
-  <link rel="icon" type="image/png" href="/minidisc.png">
+  <link rel="icon" href="data:,">
 </head>
 
 <style>
@@ -26,7 +26,7 @@
   <p>
     <a href="README.md">
       README
-    </a> / 
+    </a> /
     <a href="https://github.com/MatheusMartins/sqlite-wasm-note-taker-poc">
       Github
     </a>
@@ -60,7 +60,7 @@
       const response = await fetch(WASM_MODULE_URL, { integrity: WASM_MODULE_INT });
       const wasmBinary = await response.arrayBuffer();
       const sqlite3 = await window.initSqlJs({ wasmBinary });
-      
+
       async function saveDatabase() {
         const data = db.export();
         const root = await navigator.storage.getDirectory();
